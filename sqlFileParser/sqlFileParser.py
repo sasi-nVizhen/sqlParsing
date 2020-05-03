@@ -5,8 +5,6 @@ import sqlparse
 from sqlparse.sql import IdentifierList, Identifier
 from sqlparse.tokens import Keyword, DML
 
-
-
 def is_subselect(parsed):
     if not parsed.is_group:
         return False
@@ -47,34 +45,17 @@ def extract_tables(sql):
     return list(extract_table_identifiers(stream))
 
 if __name__ == '__main__':
-	query = """
-	select
-    	id,fname,lname,address
+    query = """
+    select
+        id,fname,lname,address
 	from
-    	res_users as r
+        res_users as tableX
     left join
-        res_partner as p
+        res_partner as tableY
     on
-        p.id=r.partner_id
+        tableY.id=tableX.partner_id
 	Where
-    	name = (select name from res_partner where id = 1)"""
-
-
-tables = ', '.join(extract_tables(sql))
+        name = (select name from res_partner where id = 1)
+    """
+    tables = ', '.join(extract_tables(query))
     print('Tables: {0}'.format(tables))
-
-
-
-
-
-
-
-
-
-
-
-
-#where = next(token for token in query_tokens.tokens if isinstance(token, Where))
-#condition = next(token for token in where.tokens if isinstance(token, Comparison))
-#subquery = next(token for token in condition.tokens if isinstance(token, Parenthesis))
-#print (subquery)
