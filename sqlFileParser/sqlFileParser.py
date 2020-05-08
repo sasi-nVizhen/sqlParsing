@@ -11,51 +11,57 @@ def is_subselect(parsed):
     for item in parsed.tokens:
         if item.ttype is DML and item.value.upper() == 'SELECT':
             return True
-    return False
+    raise False
 
 
 def extract_from_part(parsed):
     from_seen = False
     for item in parsed.tokens:
+        if item.is_group:
+            for x in extract_from_part(item):
+                yield x
         if from_seen:
             if is_subselect(item):
                 for x in extract_from_part(item):
                     yield x
-            elif item.ttype is Keyword:
-                return
+            elif item.ttype is Keyword and item.value.upper() in ['ORDER', 'GROUP', 'BY', 'HAVING', 'GROUP BY']:
+                from_seen = False
+    StopIteration
+            #elif item.ttype is Keyword:
+            #    return
             else:
                 yield item
-        elif item.ttype is Keyword and item.value.upper() == 'FROM':
+        if item.ttype is Keyword and item.value.upper() == 'FROM':
             from_seen = True
 
 def extract_table_identifiers(token_stream):
+
     for item in token_stream:
         if isinstance(item, IdentifierList):
             for identifier in item.get_identifiers():
-                yield identifier.get_name()
+                value = identifier.value.replace('"', '').lower()
+                yield value
         elif isinstance(item, Identifier):
-            yield item.get_name()
+            value = item.value.replace('"', '').lower()
+            yield value
         # It's a bug to check for Keyword here, but in the example
         # above some tables names are identified as keywords...
         elif item.ttype is Keyword:
             yield item.value           
 
 def extract_tables(sql):
-    stream = extract_from_part(sqlparse.parse(sql)[0])
-    return list(extract_table_identifiers(stream))
+    # let's handle multiple statements in one sql string
+    extracted_tables = []
+    statements = list(sqlparse.parse(sql))
+    for statement in statements:
+        if statement.get_type() != 'UNKNOWN':
+            stream = extract_from_part(statement)
+            extracted_tables.append(set(list(extract_table_identifiers(stream))))
+    return list(itertools.chain(*extracted_tables))
 
 if __name__ == '__main__':
-    query = """
-    select
-        id,fname,lname,address
-	from
-        res_users as tableX
-    left join
-        res_partner as tableY
-    on
-        tableY.id=tableX.partner_id
-	Where
-        name = (select name from res_partner where id = 1)
-    """
+    with open('test.sql', 'r') as file:
+        query = file.read().replace('\n', ' ')
+    print(query)
     tables = ', '.join(extract_tables(query))
     print('Tables: {0}'.format(tables))

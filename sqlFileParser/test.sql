@@ -10,10 +10,10 @@ select * from table5
 inner join table6
 into table7
 
-select 8 from tableX
+select col1,
+col2,
+col3,
+col4
+from tableX
 union all
 tableZ
-
-
-update table8 
-set col1='1',col2='2'
